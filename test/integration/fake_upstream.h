@@ -314,7 +314,11 @@ public:
         });
     Event::TestTimeSystem& time_system =
         dynamic_cast<Event::TestTimeSystem&>(connection_.dispatcher().timeSource());
-    Thread::CondVar::WaitStatus status = time_system.waitFor(lock_, callback_ready_event, timeout);
+    // fixfix @jmarantz: This is inherently racy? The notify can happen before the loop and
+    // then there is no conditional check inside waitFor(). IMO waitFor() needs to be changed
+    // to take a mutex and a condition and then use Await()?
+    Thread::CondVar::WaitStatus status =
+        time_system.waitFor(lock_, callback_ready_event, timeout, true);
     if (status == Thread::CondVar::WaitStatus::Timeout) {
       return testing::AssertionFailure() << "Timed out while executing on dispatcher.";
     }
